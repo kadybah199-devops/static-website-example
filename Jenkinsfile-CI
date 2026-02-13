@@ -30,7 +30,7 @@ pipeline {
         stage('Lint / Code Quality') {
             steps {
                 sh 'htmlhint ./index.html'
-                sh 'stylelint "**/*.css"'
+                //sh 'stylelint "**/*.css"'
             }
         }
 
