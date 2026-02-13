@@ -1,0 +1,16 @@
+# Image de base Node.js
+FROM node:20-bullseye
+
+# Installer htmlhint et stylelint globalement
+RUN npm install -g htmlhint stylelint stylelint-config-standard
+
+# Installer Docker CLI pour pouvoir build/push depuis le container
+RUN apt-get update && \
+    apt-get install -y docker.io git && \
+    rm -rf /var/lib/apt/lists/*
+
+# Définir le répertoire de travail
+WORKDIR /workspace
+
+# Par défaut, le container démarre en mode bash
+CMD ["/bin/bash"]
