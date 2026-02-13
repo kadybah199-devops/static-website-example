@@ -1,20 +1,29 @@
 pipeline {
-    agent any
+    agent {
+        docker { 
+            image 'node:18-bullseye'  // Node.js + npm préinstallé
+            args '-v /var/run/docker.sock:/var/run/docker.sock' // permet d'utiliser Docker CLI
+        }
+    }
 
     environment {
-        APP_NAME        = "static-website"
-        IMAGE_NAME      = "myrepo/static-website"
-        IMAGE_TAG       = "${env.BUILD_NUMBER}"
-        DOCKER_REGISTRY = "docker.io"
-
-        // Credentials ID Jenkins pour Docker Hub
-        DOCKER_CREDENTIALS = "docker-hub-creds"
+        APP_NAME          = "static-website"
+        IMAGE_NAME        = "kady199/static-website"      // change selon ton Docker Hub
+        IMAGE_TAG         = "${env.BUILD_NUMBER}"        // version = build number Jenkins
+        DOCKER_REGISTRY   = "docker.io"
+        DOCKER_CREDENTIALS = "docker-hub-creds"         // Jenkins credentials ID
     }
 
     stages {
         stage('Checkout') {
-            steps { 
-                checkout scm 
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install Lint Tools') {
+            steps {
+                sh 'npm install -g htmlhint stylelint'
             }
         }
 
@@ -27,7 +36,7 @@ pipeline {
 
         stage('Test') {
             steps {
-                echo "Pas de tests unitaires pour un site statique, optionnel JS tests"
+                echo "Pas de tests unitaires pour un site statique, étape optionnelle."
             }
         }
 
@@ -40,7 +49,6 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 script {
-                    // Récupération dynamique des identifiants Docker Hub depuis Jenkins Credentials
                     withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS}", 
                                                      usernameVariable: 'DOCKER_USER', 
                                                      passwordVariable: 'DOCKER_PASS')]) {
@@ -55,7 +63,7 @@ pipeline {
     }
 
     post {
-        success { echo "CI pipeline terminée avec succès." }
-        failure { echo "Échec du pipeline CI." }
+        success { echo "Pipeline CI terminée avec succès 🎉" }
+        failure { echo "Pipeline CI échouée ❌" }
     }
 }
