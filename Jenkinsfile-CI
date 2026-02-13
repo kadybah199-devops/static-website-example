@@ -1,17 +1,17 @@
 pipeline {
     agent {
         docker { 
-            image 'node:18-bullseye'  // Node.js + npm préinstallé
-            args '-v /var/run/docker.sock:/var/run/docker.sock' // permet d'utiliser Docker CLI
+            image 'static-website-ci'       // l'image qu'on vient de créer
+            args '-v /var/run/docker.sock:/var/run/docker.sock' // pour pouvoir build Docker
         }
     }
 
     environment {
         APP_NAME          = "static-website"
-        IMAGE_NAME        = "kady199/static-website"      // change selon ton Docker Hub
-        IMAGE_TAG         = "${env.BUILD_NUMBER}"        // version = build number Jenkins
+        IMAGE_NAME        = "kady199/static-website"   // à remplacer par ton repo Docker Hub
+        IMAGE_TAG         = "${env.BUILD_NUMBER}"
         DOCKER_REGISTRY   = "docker.io"
-        DOCKER_CREDENTIALS = "docker-hub-creds"         // Jenkins credentials ID
+        DOCKER_CREDENTIALS = "docker-hub-creds"       // Jenkins credentials ID
     }
 
     stages {
@@ -21,22 +21,16 @@ pipeline {
             }
         }
 
-        stage('Install Lint Tools') {
-            steps {
-                sh 'npm install -g htmlhint stylelint'
-            }
-        }
-
         stage('Lint / Code Quality') {
             steps {
                 sh 'htmlhint ./index.html'
-                //sh 'stylelint "**/*.css"'
+                sh 'stylelint "**/*.css" || echo "Lint CSS ignoré pour fichiers externes"'
             }
         }
 
         stage('Test') {
             steps {
-                echo "Pas de tests unitaires pour un site statique, étape optionnelle."
+                echo "Pas de tests automatisés pour site statique"
             }
         }
 
