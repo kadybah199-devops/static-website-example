@@ -1,0 +1,68 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'DEPLOY_ENV', choices: ['staging','production'], description: 'Environment to deploy')
+    }
+
+    environment {
+        APP_NAME = "static-website"
+        IMAGE_NAME = "myrepo/static-website"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        REMOTE_USER = "ubuntu"
+        SSH_CREDENTIALS = "ec2-ssh-key"
+        STAGING_HOST = "STAGING_EC2_IP"
+        PROD_HOST = "PROD_EC2_IP"
+        REMOTE_DIR = "/var/www/html"
+    }
+
+    stages {
+        stage('Select Host') {
+            steps {
+                script {
+                    if(params.DEPLOY_ENV == 'staging') {
+                        env.TARGET_HOST = env.STAGING_HOST
+                    } else {
+                        env.TARGET_HOST = env.PROD_HOST
+                    }
+                }
+            }
+        }
+
+        stage('Review / Approval') {
+            steps {
+                input message: "Approve deployment to ${params.DEPLOY_ENV}?"
+            }
+        }
+
+        stage('Blue/Green Deployment') {
+            steps {
+                script {
+                    sshagent([env.SSH_CREDENTIALS]) {
+                        // Créer un dossier temporaire pour l'image
+                        sh """
+                        ssh ${REMOTE_USER}@${env.TARGET_HOST} '
+                            mkdir -p /tmp/${APP_NAME}_new
+                            docker pull ${IMAGE_NAME}:${IMAGE_TAG}
+                            docker stop ${APP_NAME}_green || true
+                            docker run -d --name ${APP_NAME}_green -p 8080:80 ${IMAGE_NAME}:${IMAGE_TAG}
+                        '
+                        """
+                        echo "Deployment done on ${params.DEPLOY_ENV} host. Switch traffic manually or automate Nginx proxy update."
+                    }
+                }
+            }
+        }
+
+        stage('Rollback') {
+            steps {
+                input message: "Rollback if there is an issue? (manual step)"
+            }
+        }
+    }
+
+    post {
+        success { echo "Deployment pipeline finished successfully." }
+        failure { echo "Deployment failed." }
+    }
+}
